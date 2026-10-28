@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "token": {
+    "name": "ForgeCoin Ecosystem Token",
+    "symbol": "mFRG",
+    "chain": "solana",
+    "standard": "SPL Token-2022",
+    "decimals": 6,
+    "maxSupply": "2000000",
+    "mintAuthorityRevocation": "planned-after-deployment-verification"
+  },
+  "allocations": {
+    "initialSale": "1000000",
+    "firstYearMinerRewards": "175000",
+    "futureMinerCommunityRewards": "375000",
+    "ecosystemApplications": "250000",
+    "developmentReserve": "200000"
+  },
+  "sale": {
+    "status": "disabled-pending-compliance",
+    "priceUsd": "0.10",
+    "targetGrossUsd": "100000",
+    "acceptedCurrencies": [
+      "SOL",
+      "USDC"
+    ]
+  },
+  "proceedsBudget": {
+    "projectPercent": 80,
+    "founderCompensationPercent": 20
+  },
+  "notes": [
+    "Token amounts are whole mFRG, not base units.",
+    "No sale activation, mint creation, transfer, or on-chain locking is authorized by this configuration.",
+    "Rewards must be funded from the specified allocations and distributed only after independent controls and applicable reviews."
+  ]
+}
