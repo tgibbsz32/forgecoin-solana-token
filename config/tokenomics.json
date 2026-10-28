@@ -17,7 +17,7 @@
     "developmentReserve": "200000"
   },
   "sale": {
-    "status": "disabled-pending-compliance",
+    "status": "authorized-pending-activation",
     "priceUsd": "0.10",
     "targetGrossUsd": "100000",
     "acceptedCurrencies": [
