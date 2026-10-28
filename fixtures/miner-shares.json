@@ -1,0 +1,12 @@
+[
+  {
+    "minerId": "example-miner-1",
+    "solanaAddress": "EXAMPLE_REPLACE_WITH_VERIFIED_SOLANA_ADDRESS",
+    "acceptedShares": 20
+  },
+  {
+    "minerId": "example-miner-2",
+    "solanaAddress": "EXAMPLE_REPLACE_WITH_VERIFIED_SOLANA_ADDRESS_2",
+    "acceptedShares": 80
+  }
+]
