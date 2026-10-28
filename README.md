@@ -1,2 +1,18 @@
-# forgecoin-solana-token
-Solana Token 2022 Project for Forgecoin Network
+# ForgeCoin Solana Token (mFRG)
+
+Solana Token-2022 project for the ForgeCoin ecosystem.
+
+## Approved planning configuration
+
+- Maximum supply: **2,000,000 mFRG** (planned fixed cap)
+- Initial sale allocation: **1,000,000 mFRG** at proposed **$0.10** each (maximum **$100,000 gross**, contingent on lawful offering setup)
+- First-year miner rewards: **175,000 mFRG**
+- Future miner/community rewards: **375,000 mFRG**
+- Ecosystem applications: **250,000 mFRG**
+- Development reserve: **200,000 mFRG**
+- Founder/team token allocation: **none**
+- Proposed sale proceeds: **80% project / 20% founder cash compensation**
+
+Machine-readable configuration is in [config/tokenomics.json](config/tokenomics.json). Validate locally with `node scripts/validate-tokenomics.cjs`.
+
+**Status:** source configuration only. A production mint, on-chain vesting, payout integrations and purchase transactions are **not created or enabled** by these files. The sale remains disabled pending appropriate legal and security review. No guarantee of token value or returns is made.
