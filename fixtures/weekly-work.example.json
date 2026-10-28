@@ -1,0 +1,4 @@
+[
+{"workId":"pool-share-001","source":"official_pool","minerId":"miner-a","solanaAddress":"EXAMPLE_MINER_A","difficultyWeightedWork":"1000"},
+{"workId":"pool-share-002","source":"official_pool","minerId":"miner-b","solanaAddress":"EXAMPLE_MINER_B","difficultyWeightedWork":"3000"}
+]

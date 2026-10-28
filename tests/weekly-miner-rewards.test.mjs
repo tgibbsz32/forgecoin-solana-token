@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawnSync} from 'node:child_process';
+const cwd=new URL('../',import.meta.url);
+function run(rows,week){const d=fs.mkdtempSync(path.join(os.tmpdir(),'mfrg-work-'));try{const file=path.join(d,'records.json');fs.writeFileSync(file,JSON.stringify(rows));return spawnSync(process.execPath,['scripts/weekly-miner-rewards.mjs',file,String(week)],{cwd,encoding:'utf8'})}finally{fs.rmSync(d,{recursive:true,force:true})}}
+const work=[{workId:'a',source:'official_pool',minerId:'A',solanaAddress:'addrA',difficultyWeightedWork:'1'},{workId:'b',source:'official_pool',minerId:'B',solanaAddress:'addrB',difficultyWeightedWork:'3'}];
+test('weekly budget exact and proportional',()=>{const r=run(work,1);assert.equal(r.status,0,r.stderr);const j=JSON.parse(r.stdout);assert.equal(j.payouts.length,2);assert.equal(j.payouts.reduce((s,p)=>s+BigInt(p.amountBaseUnits),0n),BigInt(j.budgetBaseUnits));assert.ok(BigInt(j.payouts[1].amountBaseUnits)>BigInt(j.payouts[0].amountBaseUnits))});
+test('all 52 weekly budgets sum to exactly 175000 tokens',()=>{let sum=0n;for(let i=1;i<=52;i++){const r=run(work,i);assert.equal(r.status,0,r.stderr);sum+=BigInt(JSON.parse(r.stdout).budgetBaseUnits)}assert.equal(sum,175000000000n)});
+test('duplicate work rejected',()=>{const r=run([work[0],work[0]],1);assert.notEqual(r.status,0);assert.match(r.stderr,/duplicate/)});
+test('invalid or unverified solo work rejected',()=>{const r=run([{...work[0],source:'solo'}],1);assert.notEqual(r.status,0);assert.match(r.stderr,/official-pool/)});
+test('conflicting wallet recipient rejected',()=>{const r=run([{...work[0]}, {...work[0],workId:'other',solanaAddress:'different'}],1);assert.notEqual(r.status,0);assert.match(r.stderr,/Conflicting recipient/)});
