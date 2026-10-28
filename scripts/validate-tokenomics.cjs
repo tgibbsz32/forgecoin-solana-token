@@ -1,0 +1,12 @@
+const fs = require('node:fs');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'tokenomics.json'), 'utf8'));
+const supply = BigInt(config.token.maxSupply);
+const allocated = Object.values(config.allocations).reduce((sum, value) => sum + BigInt(value), 0n);
+assert.equal(allocated, supply, 'Allocations must equal the maximum supply');
+assert.equal(BigInt(config.allocations.initialSale), 1000000n);
+assert.equal(config.sale.status, 'disabled-pending-compliance');
+assert.equal(Number(config.sale.priceUsd) * Number(config.allocations.initialSale), Number(config.sale.targetGrossUsd));
+assert.equal(config.proceedsBudget.projectPercent + config.proceedsBudget.founderCompensationPercent, 100);
+console.log('mFRG tokenomics validated: 2,000,000 allocated; sale disabled.');
