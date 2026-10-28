@@ -1,0 +1,9 @@
+# mFRG — dual-wallet registration phase handoff
+
+Implemented a one-host SQLite-backed registration prototype binding a single issued challenge to native FRG miner address and Solana recipient address. Consumes the challenge with an atomic conditional SQL UPDATE, calls the previously developed native ForgeCoin wallet RPC signature verifier, verifies the Solana Ed25519 signature over the same challenge, and writes a persistent unique miner binding only after both proofs pass. Failed verifications burn the challenge. Existing bindings reject silent wallet rotation. Tests cover success, invalid FRG proof, invalid Solana proof, tampering and replay across two SQLite connections.
+
+**Limitations:** FRG wallet RPC response is mocked in automated tests, not verified against a real wallet. The current native FRG wallet RPC `verify` method must be validated against an actual running ForgeCoin wallet and its address/signature formats. The server must authenticate the claimant miner's identity separately and ensure the signed FRG address truly corresponds to their pool mining identity. Enrollment has no public HTTP service, rate limits, CSRF protections, trusted pool integration, durable audit approvals or multiprocess distributed architecture. Atomic challenge consumption and registration insertion are not one database transaction because cryptographic/RPC verification occurs in between; failed verification intentionally consumes the nonce. Production needs careful crash/error telemetry and user re-enrollment behavior.
+
+**Next phase:** integrate an authenticated signed pool export and registrar, enforce shared period/identity provenance, and create an immutable reward snapshot from the verified registration table. Add actual wallet-RPC and devnet end-to-end integration tests before any payout activation.
+
+No tokens minted/transferred; purchase flow inactive.
