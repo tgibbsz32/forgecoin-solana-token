@@ -1,0 +1,1 @@
+{"schemaVersion":1,"week":1,"source":"forgecoin-official-pool","closed":true,"periodStart":"2026-11-01T00:00:00Z","periodEnd":"2026-11-08T00:00:00Z","work":[{"workId":"share-1","minerId":"miner-a","difficultyWeightedWork":"1000"},{"workId":"share-2","minerId":"miner-b","difficultyWeightedWork":"3000"}]}
