@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+const config=JSON.parse(fs.readFileSync(new URL('../config/tokenomics.json',import.meta.url),'utf8'));
+const allocationFile=process.argv[2];
+if(!allocationFile) throw Error('Usage: node scripts/allocation-plan.mjs <wallet-mapping.json>');
+const mapping=JSON.parse(fs.readFileSync(allocationFile,'utf8'));
+const keys=Object.keys(config.allocations).sort();
+if(JSON.stringify(Object.keys(mapping).sort())!==JSON.stringify(keys)) throw Error('Wallet mapping must contain exactly the five allocation names');
+const isBase58=x=>typeof x==='string'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(x);
+for(const [key,addr] of Object.entries(mapping))if(!isBase58(addr))throw Error('Invalid Solana address format for '+key);
+if(new Set(Object.values(mapping)).size!==keys.length)throw Error('Allocation destinations must be distinct');
+const factor=10n**BigInt(config.token.decimals);
+const entries=keys.map(name=>({allocation:name,owner: mapping[name],amountBaseUnits:(BigInt(config.allocations[name])*factor).toString()}));
+const canonical=JSON.stringify({network:'devnet',mint:'UNSET',entries});
+const sha256=crypto.createHash('sha256').update(canonical).digest('hex');
+console.log(JSON.stringify({mode:'PLAN_ONLY',schemaVersion:1,network:'devnet',mint:'UNSET',entries,planSha256:sha256,warning:'Address format only; owner control and Solana public key decoding not verified. No on-chain mint or transfers.'},null,2));
