@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {verifyFrgAddressProof,frgStatement,trustedWalletRpcVerifier} from '../scripts/verify-frg-address-proof.mjs';
+const now=Date.parse('2026-10-28T21:00:00Z'),proof={minerId:'miner1',frgAddress:'FRG_EXAMPLE',solanaAddress:'SOL_EXAMPLE',challenge:'unique-nonce',expiresAt:'2026-10-28T21:05:00Z',signature:'example-signature'};
+const expected={minerId:proof.minerId,frgAddress:proof.frgAddress,solanaAddress:proof.solanaAddress,challenge:proof.challenge};
+test('valid response from trusted verifier accepted',async()=>{let seen;const result=await verifyFrgAddressProof({proof,expected,now,verifyRpc:async data=>(seen=data,{good:true})});assert.equal(result.verified,true);assert.equal(seen.address,proof.frgAddress);assert.match(seen.data,/forgecoin-mfrg-frg-binding-v1/)});
+test('signature verifier refusal is fatal',async()=>await assert.rejects(verifyFrgAddressProof({proof,expected,now,verifyRpc:async()=>({good:false})}),/failed/));
+test('challenge or linked wallet substitutions rejected before RPC',async()=>await assert.rejects(verifyFrgAddressProof({proof:{...proof,solanaAddress:'other'},expected,now,verifyRpc:async()=>({good:true})}),/mismatch/));
+test('expired signatures fail',async()=>await assert.rejects(verifyFrgAddressProof({proof,expected,now:now+600000,verifyRpc:async()=>({good:true})}),/expiration/));
+test('public or attacker-controlled RPC refused',()=>assert.throws(()=>trustedWalletRpcVerifier({url:'https://example.org/json_rpc'}),/loopback/));
+test('wallet JSON RPC verify request shape',async()=>{let body;const fn=trustedWalletRpcVerifier({url:'http://127.0.0.1:19482/json_rpc',fetchImpl:async (_url,opts)=>(body=JSON.parse(opts.body),{ok:true,json:async()=>({result:{good:true}})})});assert.deepEqual(await fn({data:'d',address:'a',signature:'s'}),{good:true});assert.equal(body.method,'verify')});
+test('canonical FRG statement binds payout recipient',()=>assert.match(frgStatement(proof),/SOL_EXAMPLE/));
