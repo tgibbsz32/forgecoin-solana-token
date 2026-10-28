@@ -1,0 +1,22 @@
+name: mFRG token devnet preflight
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm run validate
+      - run: npm test
+      - run: npm run plan
+      - run: npm run payout-preview
+      - run: node --check scripts/mint-devnet.mjs
