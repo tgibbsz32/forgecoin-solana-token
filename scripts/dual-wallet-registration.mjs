@@ -6,7 +6,7 @@ import {verifySolanaWalletProof} from './verify-wallet-proof.mjs';
 export class DualWalletRegistration{
  constructor(dbPath,opts={}){
   this.store=new SqliteChallengeStore(dbPath,opts);
-  this.store.db.exec("ALTER TABLE challenges ADD COLUMN frg_address TEXT");
+  if(!this.store.db.prepare("PRAGMA table_info(challenges)").all().some(c=>c.name==='frg_address')) this.store.db.exec("ALTER TABLE challenges ADD COLUMN frg_address TEXT");
   this.store.db.exec("CREATE TABLE IF NOT EXISTS wallet_bindings(miner_id TEXT PRIMARY KEY,frg_address TEXT NOT NULL,solana_address TEXT NOT NULL,verified_at INTEGER NOT NULL,challenge TEXT UNIQUE NOT NULL)");
  }
  issue({minerId,frgAddress,solanaAddress}){
