@@ -1,0 +1,9 @@
+# mFRG — signed pool snapshot to weekly payout ledger handoff
+
+Implemented an offline, deterministic payout preview combining the previously introduced Ed25519 signed export verifier with FRG/Solana miner-registration lookups. Requires each signed work record to contain an FRG mining address matching the stored registration, rejects missing/mismatched registrations or unsigned modifications, aggregates difficulty-weighted work, and apportions the fixed 175,000 mFRG first-year budget over 52 weeks with deterministic base-unit rounding. Both input snapshot and calculated ledger have SHA-256 digests. Automated tests cover conservation, replay-stable output, tampering and unregistered/mismatched miners.
+
+**Strict boundaries:** No actual live pool exporter is wired up; the sample signer tests are synthetic. A pinned signer key proves a particular key signed the records, not that the records correspond to actual pool work. Registration lookup must come from a trusted database containing properly verified FRG and Solana wallet bindings. The module does not close or persist weekly periods, reject duplicate settled weeks across runs, validate daemon consensus/work events, account for reorgs, handle missing miners/solo participation, carry-forward thresholds, payments or payout finality. This is an offline preview ONLY. The signature verifier currently allows arbitrary work-record fields, with this ledger imposing the required FRG address field. Do not distribute tokens from this preview.
+
+**Next:** wire in a trusted pinned pool signer and readonly pool data source; implement week-close immutability, idempotent ledger database, fee/rounding review, actual ForgeCoin wallet RPC proofs and end-to-end devnet-only payout dry runs.
+
+No mint, payments, sale activation, or infrastructure deployment occurred.
