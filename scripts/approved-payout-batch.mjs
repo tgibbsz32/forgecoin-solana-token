@@ -17,11 +17,13 @@ export class ApprovedPayoutBatch {
   }
   if(sum!==BigInt(settlement.budget_base_units)||sum!==BigInt(ledger.budgetBaseUnits))throw Error('Payout conservation mismatch');
   const batchDigest=createHash('sha256').update(canonical({week,ledgerDigest,payouts:ledger.payouts})).digest('hex');
+  this.db.exec('CREATE TABLE IF NOT EXISTS batch_payloads(week INTEGER PRIMARY KEY,canonical_payload TEXT NOT NULL)');
   this.db.exec('BEGIN IMMEDIATE');
   try{
    const existing=this.db.prepare('SELECT * FROM approved_payout_batches WHERE week=?').get(week);
    if(existing){if(existing.ledger_digest!==ledgerDigest||existing.batch_digest!==batchDigest)throw Error('Conflicting previously planned payout batch');this.db.exec('COMMIT');return {inserted:false,week,batchDigest};}
    this.db.prepare('INSERT INTO approved_payout_batches VALUES(?,?,?,?)').run(week,ledgerDigest,batchDigest,now);
+   this.db.prepare('INSERT INTO batch_payloads VALUES(?,?)').run(week,canonical({week,ledgerDigest,payouts:ledger.payouts}));
    const insert=this.db.prepare('INSERT INTO approved_payout_rows VALUES(?,?,?,?,?)');
    for(const p of ledger.payouts)insert.run(week,p.minerId,p.solanaAddress,p.amountBaseUnits,p.payoutKey);
    this.db.exec('COMMIT');return {inserted:true,week,batchDigest};
