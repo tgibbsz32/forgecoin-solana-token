@@ -1,4 +1,5 @@
 import {DatabaseSync} from 'node:sqlite';
+import {verifyPayoutLineage} from './verify-payout-lineage.mjs';
 import {createHash} from 'node:crypto';
 import {VersionedTransaction,Connection} from '@solana/web3.js';
 import {getAssociatedTokenAddressSync,TOKEN_2022_PROGRAM_ID} from '@solana/spl-token';
@@ -16,6 +17,7 @@ export async function inspectApprovedDevnetPayout({dbPath,payoutKey,expectedMint
    JOIN weekly_settlements s ON s.week=b.week AND s.ledger_digest=b.ledger_digest
    JOIN devnet_outbox o ON o.payout_key=r.payout_key WHERE r.payout_key=?`).get(payoutKey);
   if(!row||row.settlement_status!=='approved'||row.outbox_status!=='prepared')throw Error('Approved payout with prepared outbox required');
+  verifyPayoutLineage(dbPath,row.week);
   if(!expectedMint||!expectedSource||!expectedAuthority||!feePayer)throw Error('Trusted mint/source/authority/fee payer required');
   const wire=Buffer.from(row.transaction_base64,'base64');
   if(wire.toString('base64')!==row.transaction_base64||createHash('sha256').update(wire).digest('hex')!==row.message_digest)throw Error('Persisted outbox transaction digest mismatch');
