@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {DatabaseSync} from 'node:sqlite';import {createHash} from 'node:crypto';import {Connection,Keypair,TransactionMessage,VersionedTransaction} from '@solana/web3.js';
 import {MintLayout,AccountLayout,createTransferCheckedInstruction,getAssociatedTokenAddressSync,TOKEN_2022_PROGRAM_ID} from '@solana/spl-token';
 import {inspectApprovedDevnetPayout} from '../scripts/unified-payout-gate.mjs';
+import {canonical} from '../scripts/verify-pool-export.mjs';
 const payer=Keypair.generate(),recipient=Keypair.generate(),mint=Keypair.generate().publicKey,source=Keypair.generate().publicKey,dest=getAssociatedTokenAddressSync(mint,recipient.publicKey,true,TOKEN_2022_PROGRAM_ID);
 const hash=Keypair.generate().publicKey.toBase58(),payoutKey='a'.repeat(64);
 const ix=createTransferCheckedInstruction(source,mint,dest,payer.publicKey,42n,6,[],TOKEN_2022_PROGRAM_ID);
@@ -11,10 +12,13 @@ function accounts(){const m=Buffer.alloc(MintLayout.span);MintLayout.encode({min
  const a=(owner,amount)=>{const b=Buffer.alloc(AccountLayout.span);AccountLayout.encode({mint,owner,amount,delegateOption:0,delegate:payer.publicKey,state:1,isNativeOption:0,isNative:0n,delegatedAmount:0n,closeAuthorityOption:0,closeAuthority:payer.publicKey},b);return info(b)};
  return [info(m),a(payer.publicKey,100n),a(recipient.publicKey,0n)]}
 function connection({valid=true,balance=100n}={}){const c=Object.create(Connection.prototype);Object.defineProperty(c,'rpcEndpoint',{value:'https://api.devnet.solana.com'});c.isBlockhashValid=async()=>({value:valid});c.getMultipleAccountsInfo=async()=>{const a=accounts();if(balance!==100n){const b=Buffer.alloc(AccountLayout.span);AccountLayout.encode({mint,owner:payer.publicKey,amount:balance,delegateOption:0,delegate:payer.publicKey,state:1,isNativeOption:0,isNative:0n,delegatedAmount:0n,closeAuthorityOption:0,closeAuthority:payer.publicKey},b);a[1]=info(b)}return a};return c}
-async function run({valid=true,balance=100n,badTransaction=false,badDigest=false,badSignature=false}={}){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mfrg-unified-'));const dbPath=path.join(dir,'db.sqlite');try{const db=new DatabaseSync(dbPath);
- db.exec("CREATE TABLE approved_payout_rows(week INTEGER,miner_id TEXT,recipient TEXT,amount_base_units TEXT,payout_key TEXT); CREATE TABLE approved_payout_batches(week INTEGER,ledger_digest TEXT); CREATE TABLE weekly_settlements(week INTEGER,ledger_digest TEXT,status TEXT); CREATE TABLE devnet_outbox(payout_key TEXT,transaction_base64 TEXT,message_digest TEXT,signature TEXT,status TEXT)");
+async function run({valid=true,balance=100n,badTransaction=false,badDigest=false,badSignature=false,tamperLineage=false}={}){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mfrg-unified-'));const dbPath=path.join(dir,'db.sqlite');try{const db=new DatabaseSync(dbPath);
+ db.exec("CREATE TABLE approved_payout_rows(week INTEGER,miner_id TEXT,recipient TEXT,amount_base_units TEXT,payout_key TEXT); CREATE TABLE approved_payout_batches(week INTEGER,ledger_digest TEXT,batch_digest TEXT); CREATE TABLE weekly_settlements(week INTEGER,ledger_digest TEXT,status TEXT,budget_base_units TEXT); CREATE TABLE batch_payloads(week INTEGER,canonical_payload TEXT); CREATE TABLE devnet_outbox(payout_key TEXT,transaction_base64 TEXT,message_digest TEXT,signature TEXT,status TEXT)");
  db.prepare('INSERT INTO approved_payout_rows VALUES(1,?,?,?,?)').run('miner',recipient.publicKey.toBase58(),'42',payoutKey);
- db.prepare('INSERT INTO approved_payout_batches VALUES(1,?)').run('b'.repeat(64));db.prepare("INSERT INTO weekly_settlements VALUES(1,?,'approved')").run('b'.repeat(64));
+ const ledgerDigest='b'.repeat(64);const payload=canonical({week:1,ledgerDigest,payouts:[{minerId:'miner',frgAddress:'frg1',solanaAddress:recipient.publicKey.toBase58(),amountBaseUnits:'42',payoutKey}]});
+ db.prepare('INSERT INTO approved_payout_batches VALUES(1,?,?)').run(ledgerDigest,createHash('sha256').update(payload).digest('hex'));db.prepare("INSERT INTO weekly_settlements VALUES(1,?,'approved','42')").run(ledgerDigest);
+ db.prepare('INSERT INTO batch_payloads VALUES(1,?)').run(payload);
+ if(tamperLineage)db.exec("UPDATE approved_payout_rows SET recipient='attacker'");
  const bytes=Buffer.from(tx.serialize());if(badTransaction)bytes[bytes.length-1]^=1;
  db.prepare("INSERT INTO devnet_outbox VALUES(?,?,?,?,'prepared')").run(payoutKey,bytes.toString('base64'),badDigest?'f'.repeat(64):createHash('sha256').update(bytes).digest('hex'),badSignature?Buffer.alloc(64).toString('base64'):Buffer.from(tx.signatures[0]).toString('base64'));db.close();
  return await inspectApprovedDevnetPayout({dbPath,payoutKey,expectedMint:mint.toBase58(),expectedSource:source.toBase58(),expectedAuthority:payer.publicKey.toBase58(),feePayer:payer.publicKey.toBase58(),connection:connection({valid,balance})});
@@ -26,3 +30,5 @@ test('tampered signed transfer fails closed',async()=>await assert.rejects(run({
 
 test('outbox digest tampering rejected',async()=>await assert.rejects(run({badDigest:true}),/digest mismatch/));
 test('outbox signature tampering rejected',async()=>await assert.rejects(run({badSignature:true}),/signature mismatch/));
+
+test('tampered approved payout lineage fails closed',async()=>await assert.rejects(run({tamperLineage:true}),/differs from approved batch/));
