@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {Keypair} from '@solana/web3.js';
+import {TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync} from '@solana/spl-token';
+import {createDeploymentReviewPacket} from '../scripts/deployment-review-packet.mjs';
+import {DEVNET_RPC} from '../scripts/trusted-devnet-deployment.mjs';
+const [mint,authority,freeze,treasury]=Array.from({length:4},()=>Keypair.generate().publicKey);
+const c={network:'devnet',rpcUrl:DEVNET_RPC,tokenProgram:TOKEN_2022_PROGRAM_ID.toBase58(),decimals:6,supplyBaseUnits:'2000000000000',mintAddress:mint.toBase58(),mintAuthority:authority.toBase58(),freezeAuthority:freeze.toBase58(),treasuryOwner:treasury.toBase58(),treasuryAta:getAssociatedTokenAddressSync(mint,treasury,true,TOKEN_2022_PROGRAM_ID).toBase58(),freezePolicy:'retain-until-reviewed',mintAuthorityPolicy:'owner-controlled',extensionsPolicy:'none-proposed'};
+test('review packet sums precisely to 2M mFRG and remains inactive',()=>{const x=createDeploymentReviewPacket(c);assert.equal(x.review.allocations.reduce((a,b)=>a+BigInt(b.baseUnits),0n),2000000000000n);assert.equal(x.review.issuanceStatus,'INACTIVE_NO_TOKENS_CREATED')});
+test('identical configuration yields same review digest',()=>assert.equal(createDeploymentReviewPacket(c).reviewDigest,createDeploymentReviewPacket({...c}).reviewDigest));
+test('wrong mint authority policy fails',()=>assert.throws(()=>createDeploymentReviewPacket({...c,mintAuthorityPolicy:'assistant-managed'}),/owner-controlled/));
+test('unexpected extensions fail',()=>assert.throws(()=>createDeploymentReviewPacket({...c,extensionsPolicy:'transfer-fee'}),/separate explicit review/));
+test('wrong token supply fails',()=>assert.throws(()=>createDeploymentReviewPacket({...c,supplyBaseUnits:'1000000'}),/Supply/));
