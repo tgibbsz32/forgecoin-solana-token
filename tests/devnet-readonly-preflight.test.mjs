@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Connection} from '@solana/web3.js';import {checkDevnetReadOnly} from '../scripts/devnet-readonly-preflight.mjs';
+function mocked({healthy=true,slot=123}={}){const c=Object.create(Connection.prototype);Object.defineProperty(c,'rpcEndpoint',{value:'https://api.devnet.solana.com'});c.getGenesisHash=async()=> 'genesis-test-hash';c.getVersion=async()=>({'solana-core':'2.0.0'});c.getSlot=async()=>slot;c._rpcRequest=async()=>healthy?{result:'ok'}:{error:{message:'unhealthy'}};return c}
+test('reports verified RPC fields as diagnostic only',async()=>{const r=await checkDevnetReadOnly({connection:mocked()});assert.equal(r.finalizedSlot,123);assert.match(r.status,/NOT_LAUNCH_AUTHORIZATION/)});
+test('rejects unhealthy RPC',async()=>await assert.rejects(checkDevnetReadOnly({connection:mocked({healthy:false})}),/health/));
+test('rejects missing finalized slot',async()=>await assert.rejects(checkDevnetReadOnly({connection:mocked({slot:0})}),/Invalid/));
+test('rejects non-devnet endpoint',async()=>await assert.rejects(checkDevnetReadOnly({connection:new Connection('https://api.mainnet-beta.solana.com')}),/Official devnet/));
