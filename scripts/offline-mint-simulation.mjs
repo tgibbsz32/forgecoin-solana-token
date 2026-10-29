@@ -6,7 +6,7 @@ import {TOKEN_2022_PROGRAM_ID} from '@solana/spl-token';
 // Purely descriptive; no transaction construction, wallet access or network IO.
 export function simulateMintDeployment(config){
  const packet=createDeploymentReviewPacket(config);
- const owner=inspectOwnerReadiness({...config,genesisHash:DEVNET_GENESIS,mintAuthorityCustody:'hardware-or-owner-controlled',treasuryCustody:'owner-controlled',freezeAuthorityPolicy:config.freezePolicy});
+ const owner=inspectOwnerReadiness({...config,genesisHash:DEVNET_GENESIS,mintAuthorityCustody:config.mintAuthorityCustody??'encrypted-software-wallet',treasuryCustody:'owner-controlled',freezeAuthorityPolicy:config.freezePolicy});
  if(owner.status!=='OWNER_PUBLIC_ADDRESS_REVIEW_ONLY')throw Error('Public mint address required before simulation');
  const plan={network:'devnet',rpc:DEVNET_RPC,genesisHash:DEVNET_GENESIS,program:TOKEN_2022_PROGRAM_ID.toBase58(),mintAddress:packet.review.mintAddress,treasuryAta:packet.review.treasuryAta,authority:packet.review.mintAuthority,freezeAuthority:packet.review.freezeAuthority,decimals:packet.review.decimals,supplyBaseUnits:packet.review.supplyBaseUnits,reviewDigest:packet.reviewDigest,steps:[
   {order:1,operation:'owner review',requiresSignature:false},
