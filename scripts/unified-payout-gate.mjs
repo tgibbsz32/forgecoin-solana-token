@@ -1,4 +1,7 @@
 import {DatabaseSync} from 'node:sqlite';
+import {VersionedTransaction} from '@solana/web3.js';
+import {getAssociatedTokenAddressSync,TOKEN_2022_PROGRAM_ID} from '@solana/spl-token';
+import {PublicKey} from '@solana/web3.js';
 import {validateSignedPayout} from './validate-signed-payout.mjs';
 import {verifyTransactionSignatures,verifyRecipientAta} from './verify-transfer-signatures.mjs';
 import {verifyDevnetTokenAccounts} from './verify-devnet-token-accounts.mjs';
@@ -13,8 +16,11 @@ export async function inspectApprovedDevnetPayout({dbPath,payoutKey,expectedMint
   if(!row||row.settlement_status!=='approved'||row.outbox_status!=='prepared')throw Error('Approved payout with prepared outbox required');
   if(!expectedMint||!expectedSource||!expectedAuthority||!feePayer)throw Error('Trusted mint/source/authority/fee payer required');
   const signatures=verifyTransactionSignatures(row.transaction_base64);
+  const transaction=VersionedTransaction.deserialize(Buffer.from(row.transaction_base64,'base64'));
+  if(transaction.message.staticAccountKeys[0].toBase58()!==feePayer)throw Error('Unexpected transaction fee payer');
   if(!signatures.signerKeys.includes(expectedAuthority)||!signatures.signerKeys.includes(feePayer))throw Error('Required transfer and fee-payer signatures missing');
-  const ata=verifyRecipientAta({recipientOwner:row.recipient,expectedMint,expectedDestination:row.recipientAta??''});
+  const destination=getAssociatedTokenAddressSync(new PublicKey(expectedMint),new PublicKey(row.recipient),true,TOKEN_2022_PROGRAM_ID).toBase58();
+  const ata=verifyRecipientAta({recipientOwner:row.recipient,expectedMint,expectedDestination:destination});
   validateSignedPayout({transactionBase64:row.transaction_base64,expectedMint,expectedSource,expectedDestination:ata.destination,expectedAuthority,expectedAmountBaseUnits:row.amount_base_units});
   const accounts=await verifyDevnetTokenAccounts({mintAddress:expectedMint,sourceAddress:expectedSource,destinationAddress:ata.destination,recipientOwner:row.recipient,expectedSourceOwner:expectedAuthority,connection});
   if(BigInt(accounts.sourceBalanceBaseUnits)<BigInt(row.amount_base_units))throw Error('Insufficient source balance');
