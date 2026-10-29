@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Keypair,Connection} from '@solana/web3.js';import {TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync} from '@solana/spl-token';import {validateDeploymentConfig,verifyDevnetIdentity,DEVNET_GENESIS,DEVNET_RPC} from '../scripts/trusted-devnet-deployment.mjs';
+const [mint,authority,freeze,treasury]=Array.from({length:4},()=>Keypair.generate().publicKey);
+const valid={network:'devnet',rpcUrl:DEVNET_RPC,tokenProgram:TOKEN_2022_PROGRAM_ID.toBase58(),decimals:6,supplyBaseUnits:'2000000000000',mintAddress:mint.toBase58(),mintAuthority:authority.toBase58(),freezeAuthority:freeze.toBase58(),treasuryOwner:treasury.toBase58(),treasuryAta:getAssociatedTokenAddressSync(mint,treasury,true,TOKEN_2022_PROGRAM_ID).toBase58()};
+test('valid configuration is preview only',()=>assert.equal(validateDeploymentConfig(valid).status,'CONFIG_ONLY_NO_MINT'));
+test('wrong supply rejected',()=>assert.throws(()=>validateDeploymentConfig({...valid,supplyBaseUnits:'500000000000000'}),/Supply/));
+test('wrong network rejected',()=>assert.throws(()=>validateDeploymentConfig({...valid,network:'mainnet-beta'}),/devnet/));
+test('wrong treasury ATA rejected',()=>assert.throws(()=>validateDeploymentConfig({...valid,treasuryAta:authority.toBase58()}),/Treasury ATA/));
+test('reused authority and owner rejected',()=>assert.throws(()=>validateDeploymentConfig({...valid,treasuryOwner:authority.toBase58(),treasuryAta:getAssociatedTokenAddressSync(mint,authority,true,TOKEN_2022_PROGRAM_ID).toBase58()}),/distinct/));
+test('accepts correct pinned genesis',async()=>{const c=Object.create(Connection.prototype);Object.defineProperty(c,'rpcEndpoint',{value:DEVNET_RPC});c.getGenesisHash=async()=>DEVNET_GENESIS;assert.equal((await verifyDevnetIdentity(c)).genesisHash,DEVNET_GENESIS)});
+test('rejects incorrect genesis',async()=>{const c=Object.create(Connection.prototype);Object.defineProperty(c,'rpcEndpoint',{value:DEVNET_RPC});c.getGenesisHash=async()=>'different';await assert.rejects(verifyDevnetIdentity(c),/genesis mismatch/)});
