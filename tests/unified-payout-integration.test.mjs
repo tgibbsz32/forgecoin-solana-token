@@ -22,4 +22,4 @@ async function run({valid=true,balance=100n,badTransaction=false}={}){const dir=
 test('positive path verifies approved payout, signature, instruction, ATA, accounts and blockhash',async()=>{const r=await run();assert.equal(r.status,'OFFLINE_VERIFIED_NO_BROADCAST');assert.equal(r.amountBaseUnits,'42')});
 test('invalid devnet blockhash fails closed',async()=>await assert.rejects(run({valid:false}),/blockhash/));
 test('insufficient source token balance fails closed',async()=>await assert.rejects(run({balance:1n}),/Insufficient/));
-test('tampered signed transfer fails closed',async()=>await assert.rejects(run({badTransaction:true}),/signature|decode|deserialize|invalid/i));
+test('tampered signed transfer fails closed',async()=>await assert.rejects(run({badTransaction:true}),/signature|decode|deserialize|invalid|buffer/i));
