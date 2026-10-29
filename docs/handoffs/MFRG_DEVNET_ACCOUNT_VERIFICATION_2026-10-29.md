@@ -1,0 +1,7 @@
+# mFRG devnet account validation — handoff
+
+Implemented a read-only Solana Token-2022 account verification helper using finalized account information, mint unpacking, source/destination unpacking, program ownership and mint consistency, expected decimals, source owner (when configured), recipient owner, destination ATA derivation and frozen-account rejection. Unit tests use injected RPC account fixtures. The function defaults to the public devnet endpoint but caller-supplied connection must be restricted by the orchestration layer before production usage.
+
+**Important:** No actual live RPC request was made by automated mocked tests. Mint/recipient data is only as trustworthy as the connection and expected addresses provided. This is not yet connected to the approved payout and verified signed transaction workflow. There is no proof of available source balance sufficient for the payout or verification of token extensions/transfer-fee behavior. A missing destination ATA must be created on devnet through a separately approved transaction before distribution. No token was minted, transferred or sold.
+
+Next: combine approved weekly payout rows, cryptographic transaction proof, instruction decoding, ATA derivation, verified account information and persisted signed outbox into a single fail-closed validation gate. Add live devnet tests once a funded devnet keypair and mint are deliberately configured.
