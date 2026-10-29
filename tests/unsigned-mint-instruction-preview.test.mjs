@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Keypair} from '@solana/web3.js';
+import {TOKEN_2022_PROGRAM_ID,getAssociatedTokenAddressSync} from '@solana/spl-token';
+import {previewUnsignedMintInstructions} from '../scripts/unsigned-mint-instruction-preview.mjs';import {DEVNET_RPC} from '../scripts/trusted-devnet-deployment.mjs';
+const [mint,mintAuthority,freezeAuthority,treasuryOwner,payer]=Array.from({length:5},()=>Keypair.generate().publicKey);
+const c={network:'devnet',rpcUrl:DEVNET_RPC,tokenProgram:TOKEN_2022_PROGRAM_ID.toBase58(),decimals:6,supplyBaseUnits:'2000000000000',mintAddress:mint.toBase58(),mintAuthority:mintAuthority.toBase58(),freezeAuthority:freezeAuthority.toBase58(),treasuryOwner:treasuryOwner.toBase58(),treasuryAta:getAssociatedTokenAddressSync(mint,treasuryOwner,true,TOKEN_2022_PROGRAM_ID).toBase58(),feePayer:payer.toBase58(),freezePolicy:'retain-until-reviewed',mintAuthorityPolicy:'owner-controlled',extensionsPolicy:'none-proposed',mintAuthorityCustody:'encrypted-software-wallet',treasuryCustody:'owner-controlled'};
+test('creates four unsigned Token-2022 instructions with expected signers',()=>{const p=previewUnsignedMintInstructions(c,{mintRentLamports:1066800});assert.equal(p.instructions.length,4);assert.equal(p.requiredSigners.length,3);assert.match(p.status,/UNSIGNED/);assert.equal(p.network,'devnet')});
+test('deterministic for same public inputs',()=>assert.deepEqual(previewUnsignedMintInstructions(c,{mintRentLamports:1066800}),previewUnsignedMintInstructions(c,{mintRentLamports:1066800})));
+test('wrong rent rejected',()=>assert.throws(()=>previewUnsignedMintInstructions(c,{mintRentLamports:0}),/rent quote/));
+test('wrong network rejected',()=>assert.throws(()=>previewUnsignedMintInstructions({...c,network:'mainnet-beta'},{mintRentLamports:1066800}),/devnet/));
